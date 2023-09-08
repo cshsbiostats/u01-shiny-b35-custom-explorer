@@ -5,11 +5,15 @@ library(ggsankey)
 library(patchwork)
 library(shinyFeedback)
 
+options(shiny.maxRequestSize = 100 * 1024^2)
+
 main <- layout_sidebar(
   fillable = TRUE,
   sidebar = sidebar(
     fileInput('uploaded_data', 'Upload Data'),
     uiOutput('dynamic_controls'),
+    uiOutput('timepoint_order_ui'),
+    uiOutput('response_order_ui'),
     actionButton(
       'btn_ae_visualize',
       'Visualize',
@@ -26,16 +30,7 @@ main <- layout_sidebar(
     card_body(class = "p-0",
               plotOutput('sankey_plot')),
     full_screen = TRUE,
-    fill = FALSE
-  ),
-  layout_column_wrap(
-    card(card_header('Grade Duration'),
-         card_body(class = "p-0",
-                   plotOutput('grade_duration')), full_screen = TRUE),
-    card(card_header('Toxicity Index'),
-         card_body(class = "p-0",
-                   plotOutput('ti_hist')), full_screen = TRUE),
-    width = 1 / 2
+    fill = TRUE
   )
 )
 
@@ -48,7 +43,13 @@ shinyApp(ui, function(input, output) {
   data <- reactive({
     file <- input$uploaded_data
     
-    read_csv(file$datapath)
+    file_type <- fs::path_ext(file$datapath)
+    
+    switch (file_type,
+      'csv' = read_csv(file$datapath),
+      'xlsx' = readxl::read_excel(file$datapath)
+    )
+
   })
   
   observeEvent(input$uploaded_data, {
@@ -57,42 +58,87 @@ shinyApp(ui, function(input, output) {
       
       req(data())
       
-      trt_options <- data() |> pull(trt) |> unique() |> sort()
-      
-      ae_options <- data() |>
-        pull(ae) |>
-        unique() |>
-        sort()
-      
-      grade_options <- data() |>
-        pull(ae_grade) |>
-        unique() |>
-        sort()
+      col_names <- names(data())
       
       tagList(
         selectInput(
-          inputId = 'select_trt',
-          label = '1. Select Treatment',
-          choices = trt_options
+          inputId = 'select_patientid',
+          label = '1. Select Patient ID Column',
+          choices = col_names,
+          selected = col_names[[1]]
         ),
         selectInput(
-          inputId = 'select_ae',
-          label = '2. Select AE',
-          choices = ae_options
+          inputId = 'select_timepoint',
+          label = '2. Select Timepoint Column',
+          choices = col_names,
+          selected = col_names[[2]]
+        ),
+        selectInput(
+          inputId = 'select_group',
+          label = '3. Select AE / QOL Column',
+          choices = col_names,
+          selected = col_names[[3]]
         )
       )
     })
   })
   
+  observeEvent(input$select_timepoint, {
+    
+    output$timepoint_order_ui <- renderUI({
+
+      timepoint_choices <- data() |> pull(.data[[input$select_timepoint]])
+      
+      selectInput(
+        inputId = 'timepoint_order',
+        label = '4. Select Timepoint Ordering',
+        choices = timepoint_choices,
+        selectize = TRUE,
+        multiple = TRUE
+      )
+    })
+    
+  })
+  
+  observeEvent(input$select_group, {
+
+    output$response_order_ui <- renderUI({
+
+      req(data())
+
+      data <- data() |>
+        pivot_longer(-one_of(input$select_patientid, input$select_timepoint))
+
+      response_choices <- data |>
+        filter(name == input$select_group) |>
+        pull(value) |>
+        unique()
+
+      selectInput(
+        inputId = 'response_order',
+        label = '5. Select Response Ordering',
+        choices = response_choices,
+        selectize = TRUE,
+        multiple = TRUE
+      )
+    })
+
+  })
+
   results <- eventReactive(input$btn_ae_visualize, {
     
-    out <- make_custom_sankey(
+    req(data())
+    
+    out <- generate_custom_sankey(
       data = data(),
-      selected_treatment = input$select_trt,
-      selected_ae = input$select_ae,
-      selected_timeframe = input$select_timeframe,
-      selected_grade = input$select_grade
+      timepoint_order = input$timepoint_order,
+      response_order = input$response_order,
+      selected_group = input$select_group,
+      timepoint_col = input$select_timepoint,
+      patientid_col = input$select_patientid
     )
+    
+    out
     
   })
   
@@ -101,28 +147,12 @@ shinyApp(ui, function(input, output) {
     req(results())
     
     
-    
     output$sankey_plot <- renderPlot({
       
-      results()$sankey
+      results() 
       
     })
     
-    output$ti_hist <- renderPlot({
-      
-      results()$ti_hist
-      
-    })
-    
-    output$summary_descr <- renderPrint({
-      
-      results()$summary_description
-    })
-    
-    output$grade_duration <- renderPlot({
-      
-      results()$grade_duration
-    })
     
   })
   
