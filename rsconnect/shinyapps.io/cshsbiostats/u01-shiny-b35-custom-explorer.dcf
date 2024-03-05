@@ -1,0 +1,12 @@
+name: u01-shiny-b35-custom-explorer
+title: u01-shiny-b35-custom-explorer
+username: cshsbiostats
+account: cshsbiostats
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 9647921
+bundleId: 7661973
+url: https://cshsbiostats.shinyapps.io/u01-shiny-b35-custom-explorer/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
