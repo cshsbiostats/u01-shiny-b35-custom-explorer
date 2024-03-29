@@ -27,6 +27,18 @@ generate_custom_sankey <- \(data, timepoint_order, response_order, selected_grou
 
   plot_data <- plot_data |>
     mutate(node = factor(node, levels = c(response_order, 'Missing')))
+  
+  cbf_1 <- c("#999999", "#E69F00", "#56B4E9", "#009E73", 
+             "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+  
+  grade_colors <- c(
+    "0-1" = "#999999",
+    "2" = "#E69F00",
+    "3" = "#56B4E9",
+    "4" = "#009E73",
+    "5" = "#D55E00",
+    "Off Treatment" = "#000000"
+  )  
 
   plot <- ggplot(plot_data,
                  aes(
@@ -44,7 +56,13 @@ generate_custom_sankey <- \(data, timepoint_order, response_order, selected_grou
       axis.text.x = element_text(face = 'bold'),
       axis.title = element_blank()
     ) +
-    scale_color_discrete(drop = FALSE)
+    # scale_color_discrete(drop = FALSE) +
+    scale_color_manual(
+      values = cbf_1
+    ) + 
+    scale_fill_manual(
+      values = cbf_1
+    )
 
   plot
 
