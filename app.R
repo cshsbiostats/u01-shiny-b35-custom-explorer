@@ -4,8 +4,10 @@ library(bslib)
 library(ggsankey)
 library(patchwork)
 library(shinyFeedback)
+library(htmltools)
 
 options(shiny.maxRequestSize = 100 * 1024^2)
+
 
 main <- layout_sidebar(
   fillable = TRUE,
@@ -26,11 +28,22 @@ main <- layout_sidebar(
     )
   ),
   card(
+    card_header('Custom AE/QOL Explorer'),
+    card_body(
+      'The custom AE/QOL explorer allows the investigator to upload their own data in the application for generating Sankey diagrams. Please utilize the following file as a reference on the structure the application requires for data upload.',
+      tags$a(href = "https://raw.githubusercontent.com/cshsbiostats/breast-cancer-symptom-explorer/master/res/custom_sankey_data_template.csv", "Download Data Template")
+    ),
+    full_screen = TRUE,
+    fill = TRUE,
+    max_height = '250px'
+  ),
+  card(
     card_header('Sankey Diagram'),
     card_body(class = "p-0",
               plotOutput('sankey_plot')),
     full_screen = TRUE,
-    fill = TRUE
+    fill = TRUE,
+    height = '750px'
   )
 )
 
